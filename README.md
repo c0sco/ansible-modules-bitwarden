@@ -4,7 +4,7 @@ Bitwarden integrations for Ansible
 
 ## Lookup plugin
 
-Use `lookup()` with the `bitwarden` argument, followed by the items you want to retreive. The default field is `password`, but any other field can be specified. If you need to specify the path to the bitwarden CLI binary, use the `path` named argument. For example:
+Use `lookup()` with the `bitwarden` argument, followed by the items you want to retrieve. The default field is `password`, but any other field can be specified. If you need to specify the path to the Bitwarden CLI binary, use the `path` named argument. For example:
 
 ```yaml
 # Get username for Slashdot and Google
