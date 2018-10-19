@@ -9,6 +9,22 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import json
+import os
+import sys
+
+from subprocess import Popen, PIPE, check_output
+
+from ansible.errors import AnsibleError
+from ansible.plugins.lookup import LookupBase
+
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
+
 DOCUMENTATION = """
     lookup: bitwarden
     author:
@@ -26,6 +42,9 @@ DOCUMENTATION = """
       field:
         description: field to return from bitwarden
         default: 'password'
+     custom_field:
+        description: If True, look up named field in custom fields instead
+          of top-level dictionary.
 """
 
 EXAMPLES = """
@@ -39,18 +58,6 @@ RETURN = """
     description:
       - Items from Bitwarden vault
 """
-
-from subprocess import Popen, PIPE, check_output
-import os, sys
-
-from ansible.errors import AnsibleError
-from ansible.plugins.lookup import LookupBase
-
-try:
-    from __main__ import display
-except ImportError:
-    from ansible.utils.display import Display
-    display = Display()
 
 
 class Bitwarden(object):
@@ -91,6 +98,10 @@ class Bitwarden(object):
     def get_entry(self, key, field):
         return self._run(["get", field, key])
 
+    def get_custom_field(self, key, field):
+        data = json.loads(self.get_entry(key, 'item'))
+        return next(x for x in data['fields'] if x['name'] == field)['value']
+
 
 class LookupModule(LookupBase):
 
@@ -103,7 +114,10 @@ class LookupModule(LookupBase):
         field = kwargs.get('field', 'password')
         values = []
         for term in terms:
-            values.append(bw.get_entry(term, field))
+            if kwargs.get('custom_field'):
+                values.append(bw.get_custom_field(term, field))
+            else:
+                values.append(bw.get_entry(term, field))
         return values
 
 

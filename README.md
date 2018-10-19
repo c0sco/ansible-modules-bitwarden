@@ -79,6 +79,13 @@ TASK [debug] *********************************************************
 ok: [localhost] => {
     "msg": {
         "favorite": false, 
+        "fields": [
+            {
+                "name": "mycustomfield", 
+                "type": 0, 
+                "value": "the value of my custom field"
+            }
+        ], 
         "folderId": null, 
         "id": "12345678-0123-4321-0000-a97001342c31", 
         "login": {
@@ -95,4 +102,21 @@ ok: [localhost] => {
         "type": 1
     }
 }
+```
+
+### Get the value of a custom field
+
+```yaml
+# Get the value of a custom field
+- debug:
+    msg: {{ lookup('bitwarden', 'Google', field='mycustomfield', custom_field=true }}
+```
+
+The above might result in:
+
+```
+TASK [debug] *********************************************************
+ok: [localhost] => {
+    "msg": "the value of my custom field"
+    }
 ```
