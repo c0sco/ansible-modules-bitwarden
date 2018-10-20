@@ -96,7 +96,7 @@ class Bitwarden(object):
         return out.strip()
 
     def get_entry(self, key, field):
-        return self._run(["get", field, key])
+        return self._run(["get", field, key]).decode('utf-8')
 
     def get_custom_field(self, key, field):
         data = json.loads(self.get_entry(key, 'item'))
