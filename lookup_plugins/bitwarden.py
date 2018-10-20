@@ -47,6 +47,8 @@ DOCUMENTATION = """
      custom_field:
         description: If True, look up named field in custom fields instead
           of top-level dictionary.
+     sync:
+        description: If True, call `bw sync` before lookup
 """
 
 EXAMPLES = """
@@ -103,6 +105,9 @@ class Bitwarden(object):
                                    "{0}".format(out))
         return out.strip()
 
+    def sync(self):
+        self._run(['sync'])
+
     def get_entry(self, key, field):
         return self._run(["get", field, key]).decode('utf-8')
 
@@ -123,6 +128,10 @@ class LookupModule(LookupBase):
 
         field = kwargs.get('field', 'password')
         values = []
+
+        if kwargs.get('sync'):
+            bw.sync()
+
         for term in terms:
             if kwargs.get('custom_field'):
                 values.append(bw.get_custom_field(term, field))
