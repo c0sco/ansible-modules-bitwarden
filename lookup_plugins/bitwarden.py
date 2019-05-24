@@ -27,28 +27,28 @@ except ImportError:
 
 
 DOCUMENTATION = """
-    lookup: bitwarden
-    author:
-      -  Matt Stofko <matt@mjslabs.com>
-    requirements:
-      - bw (command line utility)
-      - BW_SESSION environment var (from `bw login` or `bw unlock`)
-    short_description: look up data from a bitwarden vault
-    description:
-      - use the bw command line utility to grab one or more items stored in a
-        bitwarden vault
-    options:
-      _terms:
-        description: name of item that contains the field to fetch
-        required: True
-      field:
-        description: field to return from bitwarden
-        default: 'password'
-     custom_field:
-        description: If True, look up named field in custom fields instead
-          of top-level dictionary.
-     sync:
-        description: If True, call `bw sync` before lookup
+lookup: bitwarden
+author:
+  - Matt Stofko <matt@mjslabs.com>
+requirements:
+  - bw (command line utility)
+  - BW_SESSION environment var (from `bw login` or `bw unlock`)
+short_description: look up data from a bitwarden vault
+description:
+  - use the bw command line utility to grab one or more items stored in a
+    bitwarden vault
+options:
+  _terms:
+    description: name of item that contains the field to fetch
+    required: true
+field:
+  description: field to return from bitwarden
+  default: 'password'
+custom_field:
+  description: If True, look up named field in custom fields instead
+      of top-level dictionary.
+sync:
+  description: If True, call `bw sync` before lookup
 """
 
 EXAMPLES = """
