@@ -14,7 +14,7 @@ import json
 import os
 import sys
 
-from subprocess import Popen, PIPE, STDOUT, check_output
+from subprocess import Popen, PIPE, check_output
 
 from ansible.errors import AnsibleError
 from ansible.plugins.lookup import LookupBase
@@ -82,28 +82,29 @@ class Bitwarden(object):
         return 'BW_SESSION' in os.environ
 
     def _run(self, args):
-        p = Popen([self.cli_path] + args, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
-        out, _ = p.communicate()
+        p = Popen([self.cli_path] + args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
         out = out.decode()
+        err = err.decode()
         rc = p.wait()
         if rc != 0:
             display.debug("Received error when running '{0} {1}': {2}"
                           .format(self.cli_path, args, out))
-            if out.startswith("Vault is locked."):
+            if err.startswith("Vault is locked."):
                 raise AnsibleError("Error accessing Bitwarden vault. "
                                    "Run 'bw unlock' to unlock the vault.")
-            elif out.startswith("You are not logged in."):
+            elif err.startswith("You are not logged in."):
                 raise AnsibleError("Error accessing Bitwarden vault. "
                                    "Run 'bw login' to login.")
-            elif out.startswith("Failed to decrypt."):
+            elif err.startswith("Failed to decrypt."):
                 raise AnsibleError("Error accessing Bitwarden vault. "
                                    "Make sure BW_SESSION is set properly.")
-            elif out.startswith("Not found."):
+            elif err.startswith("Not found."):
                 raise AnsibleError("Error accessing Bitwarden vault. "
                         "Specified item not found: {}".format(args[-1]))
             else:
                 raise AnsibleError("Unknown failure in 'bw' command: "
-                                   "{0}".format(out))
+                                   "{0}".format(err))
         return out.strip()
 
     def sync(self):
