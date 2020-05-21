@@ -78,27 +78,27 @@ The above might result in:
 TASK [debug] *********************************************************
 ok: [localhost] => {
     "msg": {
-        "favorite": false, 
+        "favorite": false,
         "fields": [
             {
-                "name": "mycustomfield", 
-                "type": 0, 
+                "name": "mycustomfield",
+                "type": 0,
                 "value": "the value of my custom field"
             }
-        ], 
-        "folderId": null, 
-        "id": "12345678-0123-4321-0000-a97001342c31", 
+        ],
+        "folderId": null,
+        "id": "12345678-0123-4321-0000-a97001342c31",
         "login": {
-            "password": "mysecret", 
-            "passwordRevisionDate": null, 
-            "totp": null, 
+            "password": "mysecret",
+            "passwordRevisionDate": null,
+            "totp": null,
             "username": "alice"
-        }, 
-        "name": "Google", 
-        "notes": null, 
-        "object": "item", 
-        "organizationId": "87654321-1234-9876-0000-a96800ed2b47", 
-        "revisionDate": "2018-10-19T19:20:17.923Z", 
+        },
+        "name": "Google",
+        "notes": null,
+        "object": "item",
+        "organizationId": "87654321-1234-9876-0000-a96800ed2b47",
+        "revisionDate": "2018-10-19T19:20:17.923Z",
         "type": 1
     }
 }
