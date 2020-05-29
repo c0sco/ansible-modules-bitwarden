@@ -14,7 +14,7 @@ import json
 import os
 import sys
 
-from subprocess import Popen, PIPE, check_output
+from subprocess import Popen, PIPE, STDOUT, check_output
 
 from ansible.errors import AnsibleError
 from ansible.plugins.lookup import LookupBase
@@ -82,8 +82,9 @@ class Bitwarden(object):
         return 'BW_SESSION' in os.environ
 
     def _run(self, args):
-        p = Popen([self.cli_path] + args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        out, err = p.communicate()
+        p = Popen([self.cli_path] + args, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        out, _ = p.communicate()
+        out = out.decode()
         rc = p.wait()
         if rc != 0:
             display.debug("Received error when running '{0} {1}': {2}"
@@ -99,7 +100,7 @@ class Bitwarden(object):
                                    "Make sure BW_SESSION is set properly.")
             elif out.startswith("Not found."):
                 raise AnsibleError("Error accessing Bitwarden vault. "
-                                   "Specified item not found.")
+                        "Specified item not found: {}".format(args[-1]))
             else:
                 raise AnsibleError("Unknown failure in 'bw' command: "
                                    "{0}".format(out))
@@ -109,7 +110,7 @@ class Bitwarden(object):
         self._run(['sync'])
 
     def get_entry(self, key, field):
-        return self._run(["get", field, key]).decode('utf-8')
+        return self._run(["get", field, key])
 
     def get_notes(self, key):
         data = json.loads(self.get_entry(key, 'item'))
