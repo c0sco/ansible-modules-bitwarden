@@ -52,7 +52,7 @@ ok: [localhost] => {
 ```yaml
 # Get username for Google
 - debug:
-    msg: {{ lookup('bitwarden', 'Google', field='username' }}
+    msg: {{ lookup('bitwarden', 'Google', field='username') }}
 ```
 
 The above might result in:
@@ -69,7 +69,7 @@ ok: [localhost] => {
 ```yaml
 # Get all available fields for an entry
 - debug:
-    msg: {{ lookup('bitwarden', 'Google', field='item' }}
+    msg: {{ lookup('bitwarden', 'Google', field='item') }}
 ```
 
 The above might result in:
@@ -109,7 +109,7 @@ ok: [localhost] => {
 ```yaml
 # Get the value of a custom field
 - debug:
-    msg: {{ lookup('bitwarden', 'Google', field='mycustomfield', custom_field=true }}
+    msg: {{ lookup('bitwarden', 'Google', field='mycustomfield', custom_field=true) }}
 ```
 
 The above might result in:
@@ -118,5 +118,23 @@ The above might result in:
 TASK [debug] *********************************************************
 ok: [localhost] => {
     "msg": "the value of my custom field"
+    }
+```
+
+### download attachments files
+
+```yaml
+# Get the value of a custom field
+- debug:
+    msg: {{ lookup('bitwarden', 'privateKey.pem',  itemid='123456-1234-1234-abbf-60c345aaa3e', attachments=true ) }}
+```
+Optional parameters - output='/ansible/publicKey.pem'
+
+The above might result in:
+
+```
+TASK [debug] *********************************************************
+ok: [localhost] => {
+    "msg": "Saved /publicKey.pem"
     }
 ```
