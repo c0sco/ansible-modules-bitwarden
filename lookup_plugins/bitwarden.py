@@ -79,7 +79,11 @@ class Bitwarden(object):
 
     @property
     def logged_in(self):
-        return 'BW_SESSION' in os.environ
+        # Parse Bitwarden status to check if logged in
+        if self.status() == 'unlocked':
+            return True
+        else:
+            return False
 
     def _run(self, args):
         p = Popen([self.cli_path] + args, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
@@ -108,6 +112,13 @@ class Bitwarden(object):
 
     def sync(self):
         self._run(['sync'])
+
+    def status(self):
+        try:
+            data = json.loads(self._run(['status']))
+        except json.decoder.JSONDecodeError as e:
+            raise AnsibleError("Error decoding Bitwarden status: %s" % e)
+        return data['status']
 
     def get_entry(self, key, field):
         return self._run(["get", field, key])
