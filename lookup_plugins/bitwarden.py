@@ -65,13 +65,21 @@ RETURN = """
 
 
 class Bitwarden(object):
-
     def __init__(self, path):
         self._cli_path = path
+        self._bw_session = ""
         try:
             check_output(self._cli_path)
         except OSError:
             raise AnsibleError("Command not found: {0}".format(self._cli_path))
+
+    @property
+    def session(self):
+        return self._bw_session
+
+    @session.setter
+    def session(self, value):
+        self._bw_session = value
 
     @property
     def cli_path(self):
@@ -86,7 +94,10 @@ class Bitwarden(object):
             return False
 
     def _run(self, args):
-        p = Popen([self.cli_path] + args, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        my_env = os.environ.copy()
+        if self.session != "":
+            my_env["BW_SESSION"] = self.session
+        p = Popen([self.cli_path] + args, stdin=PIPE, stdout=PIPE, stderr=STDOUT, env=my_env)
         out, _ = p.communicate()
         out = out.decode()
         rc = p.wait()
@@ -147,6 +158,8 @@ class LookupModule(LookupBase):
 
         if kwargs.get('sync'):
             bw.sync()
+        if kwargs.get('session'):
+            bw.session = kwargs.get('session')
 
         for term in terms:
             if kwargs.get('custom_field'):
