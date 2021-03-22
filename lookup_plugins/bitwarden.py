@@ -69,7 +69,7 @@ class Bitwarden(object):
     def __init__(self, path):
         self._cli_path = path
         try:
-            check_output(self._cli_path)
+            check_output([self._cli_path, "--version"])
         except OSError:
             raise AnsibleError("Command not found: {0}".format(self._cli_path))
 
