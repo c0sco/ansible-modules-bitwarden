@@ -120,6 +120,10 @@ class Bitwarden(object):
         data = json.loads(self.get_entry(key, 'item'))
         return next(x for x in data['fields'] if x['name'] == field)['value']
 
+    def get_attachments(self, key, itemid, output):
+        attachment = ['get', 'attachment', '{}'.format(key), '--output={}'.format(output), '--itemid={}'.format(itemid)]
+        return self._run(attachment)
+
 
 class LookupModule(LookupBase):
 
@@ -142,6 +146,15 @@ class LookupModule(LookupBase):
                 values.append(bw.get_custom_field(term, field))
             elif field == 'notes':
                 values.append(bw.get_notes(term))
+            if kwargs.get('attachments'):
+                if kwargs.get('itemid'):
+                    itemid = kwargs.get('itemid')
+                    output = kwargs.get('output', term)
+                    values.append(bw.get_attachments(term, itemid, output))
+                else:
+                    raise AnsibleError("Missing value for - itemid - "
+                                       "Please set parameters as example: - "
+                                       "itemid='f12345-d343-4bd0-abbf-4532222' ")
             else:
                 values.append(bw.get_entry(term, field))
         return values
