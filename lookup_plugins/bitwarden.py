@@ -97,7 +97,8 @@ class Bitwarden(object):
         my_env = os.environ.copy()
         if self.session != "":
             my_env["BW_SESSION"] = self.session
-        p = Popen([self.cli_path] + args, stdin=PIPE, stdout=PIPE, stderr=STDOUT, env=my_env)
+        p = Popen([self.cli_path] + args, stdin=PIPE,
+                  stdout=PIPE, stderr=STDOUT, env=my_env)
         out, _ = p.communicate()
         out = out.decode()
         rc = p.wait()
@@ -115,7 +116,7 @@ class Bitwarden(object):
                                    "Make sure BW_SESSION is set properly.")
             elif out.startswith("Not found."):
                 raise AnsibleError("Error accessing Bitwarden vault. "
-                        "Specified item not found: {}".format(args[-1]))
+                                   "Specified item not found: {}".format(args[-1]))
             else:
                 raise AnsibleError("Unknown failure in 'bw' command: "
                                    "{0}".format(out))
@@ -143,7 +144,8 @@ class Bitwarden(object):
         return next(x for x in data['fields'] if x['name'] == field)['value']
 
     def get_attachments(self, key, itemid, output):
-        attachment = ['get', 'attachment', '{}'.format(key), '--output={}'.format(output), '--itemid={}'.format(itemid)]
+        attachment = ['get', 'attachment', '{}'.format(
+            key), '--output={}'.format(output), '--itemid={}'.format(itemid)]
         return self._run(attachment)
 
 
@@ -170,7 +172,7 @@ class LookupModule(LookupBase):
                 values.append(bw.get_custom_field(term, field))
             elif field == 'notes':
                 values.append(bw.get_notes(term))
-            if kwargs.get('attachments'):
+            elif kwargs.get('attachments'):
                 if kwargs.get('itemid'):
                     itemid = kwargs.get('itemid')
                     output = kwargs.get('output', term)
