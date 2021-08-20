@@ -63,12 +63,15 @@ RETURN = """
       - Items from Bitwarden vault
 """
 
+# Global variables
+CACHE = dict()
+
 
 class Bitwarden(object):
     def __init__(self, path):
         self._cli_path = path
         self._bw_session = ""
-        self.cache = dict()
+
         try:
             check_output([self._cli_path, "--version"])
         except OSError:
@@ -97,13 +100,13 @@ class Bitwarden(object):
     def cache(func):
         def inner(*args, **kwargs):
             self = args[0]
-            cache_key = '_'.join(args[1:])
+            key = '_'.join(args[1:])
 
-            if cache_key not in self.cache:
+            if key not in CACHE:
                 value = func(*args, **kwargs)
-                self.cache[cache_key] = value
+                CACHE[key] = value
 
-            return self.cache[cache_key]
+            return CACHE[key]
 
         return inner
 
@@ -137,6 +140,9 @@ class Bitwarden(object):
         return out.strip()
 
     def sync(self):
+        global CACHE
+
+        CACHE = dict()   # Clear cache to prevent using old values in cache
         self._run(['sync'])
 
     def status(self):
