@@ -65,6 +65,7 @@ RETURN = """
 
 # Global variables
 CACHE = dict()
+LOGGED_IN = None
 
 
 class Bitwarden(object):
@@ -91,11 +92,13 @@ class Bitwarden(object):
 
     @property
     def logged_in(self):
-        # Parse Bitwarden status to check if logged in
-        if self.status() == 'unlocked':
-            return True
-        else:
-            return False
+        global LOGGED_IN
+
+        if LOGGED_IN is None:
+            # Parse Bitwarden status to check if logged in
+            LOGGED_IN = (self.status() == 'unlocked')
+
+        return LOGGED_IN
 
     def cache(func):
         def inner(*args, **kwargs):
