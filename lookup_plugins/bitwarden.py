@@ -168,10 +168,17 @@ class Bitwarden(object):
 
 class LookupModule(LookupBase):
 
-    def run(self, terms, variables=None, **kwargs):
-        bw = Bitwarden(path=kwargs.get('path', 'bw'))
+    def __init__(self, *args, **kwargs):
+        self.bw = None
 
-        if not bw.logged_in:
+        # Init super
+        super().__init__(*args, **kwargs)
+
+    def run(self, terms, variables=None, **kwargs):
+        if not self.bw:
+            self.bw = Bitwarden(path=kwargs.get('path', 'bw'))
+
+        if not self.bw.logged_in:
             raise AnsibleError("Not logged into Bitwarden: please run "
                                "'bw login', or 'bw unlock' and set the "
                                "BW_SESSION environment variable first")
@@ -180,26 +187,26 @@ class LookupModule(LookupBase):
         values = []
 
         if kwargs.get('sync'):
-            bw.sync()
+            self.bw.sync()
         if kwargs.get('session'):
-            bw.session = kwargs.get('session')
+            self.bw.session = kwargs.get('session')
 
         for term in terms:
             if kwargs.get('custom_field'):
-                values.append(bw.get_custom_field(term, field))
+                values.append(self.bw.get_custom_field(term, field))
             elif field == 'notes':
-                values.append(bw.get_notes(term))
+                values.append(self.bw.get_notes(term))
             elif kwargs.get('attachments'):
                 if kwargs.get('itemid'):
                     itemid = kwargs.get('itemid')
                     output = kwargs.get('output', term)
-                    values.append(bw.get_attachments(term, itemid, output))
+                    values.append(self.bw.get_attachments(term, itemid, output))
                 else:
                     raise AnsibleError("Missing value for - itemid - "
                                        "Please set parameters as example: - "
                                        "itemid='f12345-d343-4bd0-abbf-4532222' ")
             else:
-                values.append(bw.get_entry(term, field))
+                values.append(self.bw.get_entry(term, field))
         return values
 
 
