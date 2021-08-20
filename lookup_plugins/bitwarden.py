@@ -102,7 +102,6 @@ class Bitwarden(object):
 
     def cache(func):
         def inner(*args, **kwargs):
-            self = args[0]
             key = '_'.join(args[1:])
 
             if key not in CACHE:
