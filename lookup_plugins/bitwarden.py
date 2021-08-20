@@ -68,6 +68,7 @@ class Bitwarden(object):
     def __init__(self, path):
         self._cli_path = path
         self._bw_session = ""
+        self.cache = dict()
         try:
             check_output([self._cli_path, "--version"])
         except OSError:
@@ -92,6 +93,19 @@ class Bitwarden(object):
             return True
         else:
             return False
+
+    def cache(func):
+        def inner(*args, **kwargs):
+            self = args[0]
+            cache_key = '_'.join(args[1:])
+
+            if cache_key not in self.cache:
+                value = func(*args, **kwargs)
+                self.cache[cache_key] = value
+
+            return self.cache[cache_key]
+
+        return inner
 
     def _run(self, args):
         my_env = os.environ.copy()
@@ -132,13 +146,16 @@ class Bitwarden(object):
             raise AnsibleError("Error decoding Bitwarden status: %s" % e)
         return data['status']
 
+    @cache
     def get_entry(self, key, field):
         return self._run(["get", field, key])
 
+    @cache
     def get_notes(self, key):
         data = json.loads(self.get_entry(key, 'item'))
         return data['notes']
 
+    @cache
     def get_custom_field(self, key, field):
         data = json.loads(self.get_entry(key, 'item'))
         return next(x for x in data['fields'] if x['name'] == field)['value']
