@@ -63,11 +63,17 @@ RETURN = """
       - Items from Bitwarden vault
 """
 
+# Global variables
+bw = None
+
 
 class Bitwarden(object):
     def __init__(self, path):
         self._cli_path = path
         self._bw_session = ""
+        self._cache = dict()
+        self._logged_in = None
+
         try:
             check_output([self._cli_path, "--version"])
         except OSError:
@@ -87,11 +93,24 @@ class Bitwarden(object):
 
     @property
     def logged_in(self):
-        # Parse Bitwarden status to check if logged in
-        if self.status() == 'unlocked':
-            return True
-        else:
-            return False
+        if self._logged_in is None:
+            # Parse Bitwarden status to check if logged in
+            self._logged_in = (self.status() == 'unlocked')
+
+        return self._logged_in
+
+    def cache(func):
+        def inner(*args, **kwargs):
+            self = args[0]
+            key = '_'.join(args[1:])
+
+            if key not in self._cache:
+                value = func(*args, **kwargs)
+                self._cache[key] = value
+
+            return self._cache[key]
+
+        return inner
 
     def _run(self, args):
         my_env = os.environ.copy()
@@ -123,6 +142,7 @@ class Bitwarden(object):
         return out.strip()
 
     def sync(self):
+        self._cache = dict()   # Clear cache to prevent using old values in cache
         self._run(['sync'])
 
     def status(self):
@@ -132,13 +152,16 @@ class Bitwarden(object):
             raise AnsibleError("Error decoding Bitwarden status: %s" % e)
         return data['status']
 
+    @cache
     def get_entry(self, key, field):
         return self._run(["get", field, key])
 
+    @cache
     def get_notes(self, key):
         data = json.loads(self.get_entry(key, 'item'))
         return data['notes']
 
+    @cache
     def get_custom_field(self, key, field):
         data = json.loads(self.get_entry(key, 'item'))
         return next(x for x in data['fields'] if x['name'] == field)['value']
@@ -152,7 +175,10 @@ class Bitwarden(object):
 class LookupModule(LookupBase):
 
     def run(self, terms, variables=None, **kwargs):
-        bw = Bitwarden(path=kwargs.get('path', 'bw'))
+        global bw
+
+        if not bw:
+            bw = Bitwarden(path=kwargs.get('path', 'bw'))
 
         if not bw.logged_in:
             raise AnsibleError("Not logged into Bitwarden: please run "
