@@ -64,14 +64,15 @@ RETURN = """
 """
 
 # Global variables
-CACHE = dict()
-LOGGED_IN = None
+bw = None
 
 
 class Bitwarden(object):
     def __init__(self, path):
         self._cli_path = path
         self._bw_session = ""
+        self._cache = dict()
+        self._logged_in = None
 
         try:
             check_output([self._cli_path, "--version"])
@@ -92,23 +93,22 @@ class Bitwarden(object):
 
     @property
     def logged_in(self):
-        global LOGGED_IN
-
-        if LOGGED_IN is None:
+        if self._logged_in is None:
             # Parse Bitwarden status to check if logged in
-            LOGGED_IN = (self.status() == 'unlocked')
+            self._logged_in = (self.status() == 'unlocked')
 
-        return LOGGED_IN
+        return self._logged_in
 
     def cache(func):
         def inner(*args, **kwargs):
+            self = args[0]
             key = '_'.join(args[1:])
 
-            if key not in CACHE:
+            if key not in self._cache:
                 value = func(*args, **kwargs)
-                CACHE[key] = value
+                self._cache[key] = value
 
-            return CACHE[key]
+            return self._cache[key]
 
         return inner
 
@@ -142,9 +142,7 @@ class Bitwarden(object):
         return out.strip()
 
     def sync(self):
-        global CACHE
-
-        CACHE = dict()   # Clear cache to prevent using old values in cache
+        self._cache = dict()   # Clear cache to prevent using old values in cache
         self._run(['sync'])
 
     def status(self):
@@ -176,17 +174,13 @@ class Bitwarden(object):
 
 class LookupModule(LookupBase):
 
-    def __init__(self, *args, **kwargs):
-        self.bw = None
-
-        # Init super
-        super().__init__(*args, **kwargs)
-
     def run(self, terms, variables=None, **kwargs):
-        if not self.bw:
-            self.bw = Bitwarden(path=kwargs.get('path', 'bw'))
+        global bw
 
-        if not self.bw.logged_in:
+        if not bw:
+            bw = Bitwarden(path=kwargs.get('path', 'bw'))
+
+        if not bw.logged_in:
             raise AnsibleError("Not logged into Bitwarden: please run "
                                "'bw login', or 'bw unlock' and set the "
                                "BW_SESSION environment variable first")
@@ -195,26 +189,26 @@ class LookupModule(LookupBase):
         values = []
 
         if kwargs.get('sync'):
-            self.bw.sync()
+            bw.sync()
         if kwargs.get('session'):
-            self.bw.session = kwargs.get('session')
+            bw.session = kwargs.get('session')
 
         for term in terms:
             if kwargs.get('custom_field'):
-                values.append(self.bw.get_custom_field(term, field))
+                values.append(bw.get_custom_field(term, field))
             elif field == 'notes':
-                values.append(self.bw.get_notes(term))
+                values.append(bw.get_notes(term))
             elif kwargs.get('attachments'):
                 if kwargs.get('itemid'):
                     itemid = kwargs.get('itemid')
                     output = kwargs.get('output', term)
-                    values.append(self.bw.get_attachments(term, itemid, output))
+                    values.append(bw.get_attachments(term, itemid, output))
                 else:
                     raise AnsibleError("Missing value for - itemid - "
                                        "Please set parameters as example: - "
                                        "itemid='f12345-d343-4bd0-abbf-4532222' ")
             else:
-                values.append(self.bw.get_entry(term, field))
+                values.append(bw.get_entry(term, field))
         return values
 
 
