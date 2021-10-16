@@ -98,7 +98,7 @@ class Bitwarden(object):
         if self.session != "":
             my_env["BW_SESSION"] = self.session
         p = Popen([self.cli_path] + args, stdin=PIPE,
-                  stdout=PIPE, stderr=STDOUT, env=my_env)
+                  stdout=PIPE, env=my_env)
         out, _ = p.communicate()
         out = out.decode()
         rc = p.wait()
