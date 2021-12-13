@@ -64,6 +64,30 @@ ok: [localhost] => {
     }
 ```
 
+### Get a single password use organization and collection
+
+```
+---
+- hosts: localhost
+  roles:
+    - ansible-modules-bitwarden
+  tasks:
+    - debug:
+        msg: "{{ lookup('bitwarden', 'google', field='password', organization='my org', collection='shared accounts', sync=True) }}"
+```
+
+The above might result in:
+
+```
+TASK [Gathering Facts] *********************************************************
+ok: [localhost]
+
+TASK [debug] *********************************************************
+ok: [localhost] => {
+    "msg": "mysecret"
+}
+```
+
 ### See all available fields
 
 ```yaml
