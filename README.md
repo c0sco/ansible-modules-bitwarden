@@ -64,6 +64,30 @@ ok: [localhost] => {
     }
 ```
 
+### Get a single password use organization and collection
+
+```
+---
+- hosts: localhost
+  roles:
+    - ansible-modules-bitwarden
+  tasks:
+    - debug:
+        msg: "{{ lookup('bitwarden', 'google', field='password', organization='my org', collection='shared accounts', sync=True) }}"
+```
+
+The above might result in:
+
+```
+TASK [Gathering Facts] *********************************************************
+ok: [localhost]
+
+TASK [debug] *********************************************************
+ok: [localhost] => {
+    "msg": "mysecret"
+}
+```
+
 ### See all available fields
 
 ```yaml
@@ -109,7 +133,7 @@ ok: [localhost] => {
 ```yaml
 # Get the value of a custom field
 - debug:
-    msg: {{ lookup('bitwarden', 'Google', field='mycustomfield', custom_field=true) }}
+    msg: {{ lookup('bitwarden', 'Google', field='mycustomfield', type='custom') }}
 ```
 
 The above might result in:
@@ -126,7 +150,7 @@ ok: [localhost] => {
 ```yaml
 # Get the value of a custom field
 - debug:
-    msg: {{ lookup('bitwarden', 'privateKey.pem',  itemid='123456-1234-1234-abbf-60c345aaa3e', attachments=true ) }}
+    msg: {{ lookup('bitwarden', 'Google', field='privateKey.pem',  type='attachment' ) }}
 ```
 Optional parameters - output='/ansible/publicKey.pem'
 
@@ -135,6 +159,6 @@ The above might result in:
 ```
 TASK [debug] *********************************************************
 ok: [localhost] => {
-    "msg": "Saved /publicKey.pem"
+    "msg": "ssh-rsa xxxx foo@bar"
     }
 ```
