@@ -117,6 +117,9 @@ class Bitwarden(object):
             elif out.startswith("Not found."):
                 raise AnsibleError("Error accessing Bitwarden vault. "
                                    "Specified item not found: {}".format(args[-1]))
+            elif out.startswith("More than one result was found."):
+                raise AnsibleError("Error accessing Bitwarden vault. "
+                                   "Specified item found more than once: {}".format(args[-1]))
             else:
                 raise AnsibleError("Unknown failure in 'bw' command: "
                                    "{0}".format(out))
@@ -132,21 +135,84 @@ class Bitwarden(object):
             raise AnsibleError("Error decoding Bitwarden status: %s" % e)
         return data['status']
 
-    def get_entry(self, key, field):
-        return self._run(["get", field, key])
+    def organization(self, name):
+        try:
+            data = json.loads(self._run(['list', 'organizations']))
+        except json.decoder.JSONDecodeError as e:
+            raise AnsibleError("Error decoding Bitwarden list organizations: %s" % e)
 
-    def get_notes(self, key):
-        data = json.loads(self.get_entry(key, 'item'))
-        return data['notes']
+        if not isinstance(data, list):
+            raise AnsibleError("Error decoding Bitwarden list organizations no organization in list")
 
-    def get_custom_field(self, key, field):
-        data = json.loads(self.get_entry(key, 'item'))
-        return next(x for x in data['fields'] if x['name'] == field)['value']
+        if len(data) == 0:
+            raise AnsibleError("Error decoding Bitwarden list organizations no organization in list")
 
-    def get_attachments(self, key, itemid, output):
-        attachment = ['get', 'attachment', '{}'.format(
-            key), '--output={}'.format(output), '--itemid={}'.format(itemid)]
-        return self._run(attachment)
+        for organization in data:
+            if 'id' in organization.keys() and 'name' in organization.keys() and organization['name'] == name:
+                return(organization['id'])
+
+        raise AnsibleError("Error decoding Bitwarden list organizations no organization not found: %s" % name)
+
+    def collection(self, name):
+        try:
+            data = json.loads(self._run(['list', 'collections']))
+        except json.decoder.JSONDecodeError as e:
+            raise AnsibleError("Error decoding Bitwarden list collections: %s" % e)
+
+        if not isinstance(data, list):
+            raise AnsibleError("Error decoding Bitwarden list collections no collection in list")
+
+        if len(data) == 0:
+            raise AnsibleError("Error decoding Bitwarden list collections no collection in list")
+
+        for collection in data:
+            if 'id' in collection.keys() and 'name' in collection.keys() and collection['name'] == name:
+                return(collection['id'])
+
+        raise AnsibleError("Error decoding Bitwarden list collections no collection not found: %s" % name)
+
+    def get_entry(self, key, field, organizationId=None, collectionId=None, type='default'):
+        #return self._run(["get", field, key])
+        data = json.loads(self._run(['list', 'items', '--search', key]))
+        if not isinstance(data, list):
+            raise AnsibleError("Error decoding Bitwarden list items no item in list")
+
+        if len(data) == 0:
+            raise AnsibleError("Error decoding Bitwarden list items no item in list")
+         
+        _return = []
+        for result in data:
+            if 'id' in result.keys() and 'name' in result.keys() and 'collectionIds' in result.keys() and 'organizationId' in result.keys():
+                if organizationId == None:
+                    pass
+                elif result['organizationId'] != organizationId:
+                    continue
+                if collectionId == None:
+                    pass
+                elif collectionId not in result['collectionIds']:
+                    continue
+
+                if type == 'default' and field == 'item':
+                    _return.append(result)
+                elif type == 'default' and field == 'password':
+                    _return.append(result['login']['password'])
+                elif type == 'default' and field == 'username':
+                    _return.append(result['login']['username'])
+                elif type == 'custom' and 'fields' in result.keys() and any(field in x['name'] for x in result['fields']):
+                    for x in result['fields']:
+                        if x['name'] == field:
+                            _return.append( x['value'])
+                elif type == 'attachment' and 'attachments' in result.keys() and any(field in x['fileName'] for x in result['attachments']):
+                    for x in result['attachments']:
+                        if x['fileName'] == field:
+                            _return.append(self._run(['get', 'attachment', x['id'], '--quiet', '--raw', '--output', '/dev/stdout', '--itemid', result['id']]))
+                elif type == 'default' and field in result.keys():
+                    _return.append(result[field])
+        if len(_return) > 1:
+            raise AnsibleError("Error decoding Bitwarden list items more then one item found for: %s" % field)
+        elif len(_return) == 1:
+            return _return[0]
+        raise AnsibleError("Error decoding Bitwarden list items no field not found: %s" % field)
 
 
 class LookupModule(LookupBase):
@@ -160,29 +226,27 @@ class LookupModule(LookupBase):
                                "BW_SESSION environment variable first")
 
         field = kwargs.get('field', 'password')
+        type = kwargs.get('type', 'default')
+        organization = kwargs.get('organization', None)
+        organizationId = None
+        collection = kwargs.get('collection', None)
+        collectionId = None
         values = []
+
+        if organization != None:
+            organizationId = bw.organization(organization)
+
+        if collection != None:
+            collectionId = bw.collection(collection)
 
         if kwargs.get('sync'):
             bw.sync()
+        
         if kwargs.get('session'):
             bw.session = kwargs.get('session')
 
         for term in terms:
-            if kwargs.get('custom_field'):
-                values.append(bw.get_custom_field(term, field))
-            elif field == 'notes':
-                values.append(bw.get_notes(term))
-            elif kwargs.get('attachments'):
-                if kwargs.get('itemid'):
-                    itemid = kwargs.get('itemid')
-                    output = kwargs.get('output', term)
-                    values.append(bw.get_attachments(term, itemid, output))
-                else:
-                    raise AnsibleError("Missing value for - itemid - "
-                                       "Please set parameters as example: - "
-                                       "itemid='f12345-d343-4bd0-abbf-4532222' ")
-            else:
-                values.append(bw.get_entry(term, field))
+            values.append(bw.get_entry(term, field, organizationId, collectionId, type))
         return values
 
 
