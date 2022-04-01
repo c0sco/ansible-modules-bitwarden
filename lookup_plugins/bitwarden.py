@@ -171,7 +171,7 @@ class Bitwarden(object):
 
         raise AnsibleError("Error decoding Bitwarden list collections no collection not found: %s" % name)
 
-    def get_entry(self, key, field, organizationId=None, collectionId=None):
+    def get_entry(self, key, field, organizationId=None, collectionId=None, type='default'):
         #return self._run(["get", field, key])
         data = json.loads(self._run(['list', 'items', '--search', key]))
         if not isinstance(data, list):
@@ -191,28 +191,28 @@ class Bitwarden(object):
                     pass
                 elif collectionId not in result['collectionIds']:
                     continue
-                if field == 'item':
+
+                if type == 'default' and field == 'item':
                     _return.append(result)
-                elif field == 'password':
+                elif type == 'default' and field == 'password':
                     _return.append(result['login']['password'])
-                elif field == 'username':
+                elif type == 'default' and field == 'username':
                     _return.append(result['login']['username'])
-                elif field in result.keys():
+                elif type == 'custom' and 'fields' in result.keys() and any(field in x['name'] for x in result['fields']):
+                    for x in result['fields']:
+                        if x['name'] == field:
+                            _return.append( x['value'])
+                elif type == 'attachment' and 'attachments' in result.keys() and any(field in x['fileName'] for x in result['attachments']):
+                    for x in result['attachments']:
+                        if x['fileName'] == field:
+                            _return.append(self._run(['get', 'attachment', x['id'], '--quiet', '--raw', '--output', '/dev/stdout', '--itemid', result['id']]))
+                elif type == 'default' and field in result.keys():
                     _return.append(result[field])
         if len(_return) > 1:
             raise AnsibleError("Error decoding Bitwarden list items more then one item found for: %s" % field)
         elif len(_return) == 1:
             return _return[0]
         raise AnsibleError("Error decoding Bitwarden list items no field not found: %s" % field)
-    
-    def get_custom_field(self, key, field, organizationId=None, collectionId=None):
-        data = json.loads(self.get_entry(key, 'item', organizationId, collectionId))
-        return next(x for x in data['fields'] if x['name'] == field)['value']
-
-    def get_attachments(self, key, itemid, output):
-        attachment = ['get', 'attachment', '{}'.format(
-            key), '--output={}'.format(output), '--itemid={}'.format(itemid)]
-        return self._run(attachment)
 
 
 class LookupModule(LookupBase):
@@ -226,6 +226,7 @@ class LookupModule(LookupBase):
                                "BW_SESSION environment variable first")
 
         field = kwargs.get('field', 'password')
+        type = kwargs.get('type', 'default')
         organization = kwargs.get('organization', None)
         organizationId = None
         collection = kwargs.get('collection', None)
@@ -240,23 +241,12 @@ class LookupModule(LookupBase):
 
         if kwargs.get('sync'):
             bw.sync()
+        
         if kwargs.get('session'):
             bw.session = kwargs.get('session')
 
         for term in terms:
-            if kwargs.get('custom_field'):
-                values.append(bw.get_custom_field(term, field, organizationId, collectionId))
-            elif kwargs.get('attachments'):
-                if kwargs.get('itemid'):
-                    itemid = kwargs.get('itemid')
-                    output = kwargs.get('output', term)
-                    values.append(bw.get_attachments(term, itemid, output))
-                else:
-                    raise AnsibleError("Missing value for - itemid - "
-                                       "Please set parameters as example: - "
-                                       "itemid='f12345-d343-4bd0-abbf-4532222' ")
-            else:
-                values.append(bw.get_entry(term, field, organizationId, collectionId))
+            values.append(bw.get_entry(term, field, organizationId, collectionId, type))
         return values
 
 
